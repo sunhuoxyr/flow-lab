@@ -8,6 +8,15 @@
 
 n8n（Docker，:5678）· 触发器/定时 + Code 节点（JS）· Obsidian 库目录挂载进容器（`/vault`）
 
+```mermaid
+flowchart LR
+  CRON[cron 触发] --> N8N[n8n :5678]
+  N8N -->|读写 .md| VAULT[(Obsidian 库<br/>/vault 挂载)]
+  N8N -->|POST /api/chat/once| LAB[agent-lab :8080<br/>host.docker.internal]
+  LAB -->|RAG 语料| VAULT
+  N8N --> INBOX[99-Diary/n8n-提醒.md<br/>Tasks 待办 → Todo 🎯]
+```
+
 ## 启动
 
 ```bash
