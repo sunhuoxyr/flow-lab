@@ -1,5 +1,7 @@
 # flow-lab
 
+> 远程仓：https://github.com/sunhuoxyr/flow-lab（private）
+
 个人**业务自动化流程**练习场（n8n）。与 agent-lab 分层：agent-lab 学模型接入原理，本仓让流程出活。
 
 ## 栈
