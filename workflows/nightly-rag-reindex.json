@@ -1,0 +1,41 @@
+{
+  "name": "RAG 索引每晚重建",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 22 * * *"
+            }
+          ]
+        }
+      },
+      "id": "c1b2c3d4-0001-4000-8000-000000000001",
+      "name": "每天 22:30",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8080/api/rag/reindex",
+        "options": { "timeout": 180000 }
+      },
+      "id": "c1b2c3d4-0002-4000-8000-000000000002",
+      "name": "调 agent-lab 重建索引",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    }
+  ],
+  "connections": {
+    "每天 22:30": {
+      "main": [[{ "node": "调 agent-lab 重建索引", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {}
+}
