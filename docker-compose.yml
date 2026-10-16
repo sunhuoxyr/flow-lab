@@ -11,6 +11,8 @@ services:
       NODE_FUNCTION_ALLOW_BUILTIN: fs
       # localhost 走 http，不开 secure cookie
       N8N_SECURE_COOKIE: "false"
+      # 纯本机自用：免登录（暴露端口前必须改回）
+      N8N_USER_MANAGEMENT_DISABLED: "true"
     volumes:
       - n8n-data:/home/node/.n8n
       - ${VAULT_PATH}:/vault

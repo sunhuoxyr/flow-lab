@@ -1,0 +1,94 @@
+{
+  "name": "库变更每日摘要",
+  "active": true,
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 21 * * *"
+            }
+          ]
+        }
+      },
+      "id": "b1b2c3d4-0001-4000-8000-000000000001",
+      "name": "每天 21:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst path = require('path');\nconst ROOT = '/vault';\nconst SKIP = new Set(['.obsidian', '.git', '.trash', 'Assets', 'Excalidraw', '90-launchCenter']);\nconst today = new Date();\ntoday.setHours(0, 0, 0, 0);\nconst changed = [];\n\nfunction walk(dir) {\n  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {\n    if (SKIP.has(entry.name) || entry.name.startsWith('.')) continue;\n    const full = path.join(dir, entry.name);\n    if (entry.isDirectory()) { walk(full); continue; }\n    if (!entry.name.endsWith('.md')) continue;\n    try {\n      const st = fs.statSync(full);\n      if (st.mtime >= today) changed.push(path.relative(ROOT, full));\n    } catch (e) { /* iCloud 占位文件可能读不到，跳过 */ }\n  }\n}\nwalk(ROOT);\nchanged.sort();\nconst list = changed.slice(0, 50);\nreturn [{ json: {\n  count: changed.length,\n  list,\n  prompt: list.length === 0\n    ? ''\n    : `以下是今天知识库变更的 ${changed.length} 个文件（最多列 50）：\\n${list.join('\\n')}\\n\\n请用一句话（50 字内）总结今天库里的变化。`\n} }];"
+      },
+      "id": "b1b2c3d4-0002-4000-8000-000000000002",
+      "name": "收集今日变更",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "loose" },
+          "conditions": [
+            {
+              "id": "cond-not-empty",
+              "leftValue": "={{ $json.prompt }}",
+              "rightValue": "",
+              "operator": { "type": "string", "operation": "notEmpty" }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "b1b2c3d4-0003-4000-8000-000000000003",
+      "name": "有变更才调 LLM",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://host.docker.internal:8080/api/chat/once",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"message\": {{ JSON.stringify($json.prompt) }}\n}",
+        "options": { "timeout": 100000 }
+      },
+      "id": "b1b2c3d4-0004-4000-8000-000000000004",
+      "name": "调 agent-lab 摘要",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst inbox = '/vault/99-Diary/n8n-提醒.md';\nconst now = new Date();\nconst y = now.getFullYear();\nconst m = String(now.getMonth() + 1).padStart(2, '0');\nconst d = String(now.getDate()).padStart(2, '0');\nconst reply = $json.reply || '';\nconst changed = $('收集今日变更').first().json;\nconst lines = [\n  `\\n## ${y}-${m}-${d} 库变更摘要`,\n  '',\n  `> 今日变更 ${changed.count} 个文件。摘要（${reply.startsWith('（mock') ? 'mock' : 'LLM'}）：`,\n  '',\n  reply,\n  '',\n  '<details><summary>文件清单</summary>',\n  '',\n  ...changed.list.map(f => `- ${f}`),\n  '',\n  '</details>',\n  ''\n];\nfs.appendFileSync(inbox, lines.join('\\n'));\nreturn [{ json: { wrote: true, reply } }];"
+      },
+      "id": "b1b2c3d4-0005-4000-8000-000000000005",
+      "name": "写摘要进收件箱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [960, 0]
+    }
+  ],
+  "connections": {
+    "每天 21:00": {
+      "main": [[{ "node": "收集今日变更", "type": "main", "index": 0 }]]
+    },
+    "收集今日变更": {
+      "main": [[{ "node": "有变更才调 LLM", "type": "main", "index": 0 }]]
+    },
+    "有变更才调 LLM": {
+      "main": [[{ "node": "调 agent-lab 摘要", "type": "main", "index": 0 }]]
+    },
+    "调 agent-lab 摘要": {
+      "main": [[{ "node": "写摘要进收件箱", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {}
+}
