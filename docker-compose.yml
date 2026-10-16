@@ -1,0 +1,25 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: flow-lab-n8n
+    ports:
+      - "5678:5678"
+    environment:
+      TZ: Asia/Shanghai
+      GENERIC_TIMEZONE: Asia/Shanghai
+      # Code 节点放开 fs：第一个流程要读库文件存在性、追加提醒
+      NODE_FUNCTION_ALLOW_BUILTIN: fs
+      # localhost 走 http，不开 secure cookie
+      N8N_SECURE_COOKIE: "false"
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ${VAULT_PATH}:/vault
+      - ./workflows:/workflows:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5678/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  n8n-data:

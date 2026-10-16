@@ -1,0 +1,46 @@
+{
+  "name": "记账月历提醒",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 10 1,15 * *"
+            }
+          ]
+        }
+      },
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "name": "每月1号15号 10:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "jsCode": "const fs = require('fs');\nconst dir = '/vault/60-投资/记账';\nconst inbox = '/vault/99-Diary/n8n-提醒.md';\nconst now = new Date();\nconst y = now.getFullYear();\nconst m = String(now.getMonth() + 1).padStart(2, '0');\nconst d = String(now.getDate()).padStart(2, '0');\nconst tasks = [];\n\nif (now.getDate() === 1) {\n  const f = `${dir}/${y}${m}.md`;\n  if (!fs.existsSync(f)) {\n    const lastDay = new Date(y, now.getMonth() + 1, 0).getDate();\n    tasks.push(`- [ ] 建 ${y}${m} 记账笔记（复制 00-Template/记账-月度模板） 📅 ${y}-${m}-${lastDay}`);\n  }\n}\n\nif (now.getDate() === 15) {\n  const prev = new Date(y, now.getMonth() - 1, 1);\n  const py = prev.getFullYear();\n  const pm = String(prev.getMonth() + 1).padStart(2, '0');\n  const lastDay = new Date(y, now.getMonth(), 0).getDate();\n  tasks.push(`- [ ] 核对 ${py}${pm} 记账：总览余额与入账补齐、对照大额贷款台账 📅 ${y}-${m}-${lastDay}`);\n}\n\nif (tasks.length > 0) {\n  fs.appendFileSync(inbox, `\\n## ${y}-${m}-${d} 记账月历\\n\\n${tasks.join('\\n')}\\n`);\n}\n\nreturn [{ json: { wrote: tasks.length, tasks } }];"
+      },
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "name": "检查并写提醒",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [260, 0]
+    }
+  ],
+  "connections": {
+    "每月1号15号 10:00": {
+      "main": [
+        [
+          {
+            "node": "检查并写提醒",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {}
+}
